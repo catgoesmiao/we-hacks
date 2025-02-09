@@ -1,6 +1,7 @@
 import os
 import pygame, sys, random
 import soundfile as sf
+
 from pygame.locals import *
 from pygame import mixer
 
@@ -13,6 +14,7 @@ pygame.display.set_caption("Beautiful and Wonderful Fish 鱻 Snatcher")
 # BGM
 pygame.mixer.music.load("piccadilly.wav")
 pygame.mixer.music.play(-1)
+sale = pygame.mixer.Sound("sale.mp3")
 
 # Colors
 b_color = (0, 0, 0)        # Black
@@ -74,18 +76,16 @@ while menu:
 
 # Fish data
 FISHIES = [
-    {"name": "fish1", "rarity": "-", "cost": 5},
-    {"name": "fish2", "rarity": "-", "cost": 5},
-    {"name": "fish3", "rarity": "-", "cost": 5},
-    {"name": "fish4", "rarity": "-", "cost": 5},
-    {"name": "fish5", "rarity": "-", "cost": 5},
-    {"name": "fish6", "rarity": "-", "cost": 5},
-    {"name": "fish7", "rarity": "-", "cost": 5},
-    {"name": "fish8", "rarity": "-", "cost": 5},
-    {"name": "fish9", "rarity": "-", "cost": 5},
-    {"name": "fish10", "rarity": "-", "cost": 5},
-    {"name": "fish11", "rarity": "-", "cost": 5},
-    {"name": "fish12", "rarity": "-", "cost": 5}
+    {"name": "Blobette", "rarity": "R", "cost": 100},
+    {"name": "Chef", "rarity": "R", "cost": 85},
+    {"name": "Gerald", "rarity": "R", "cost": 90},
+    {"name": "Goldfish", "rarity": "C", "cost": 5},
+    {"name": "Largemouth", "rarity": "U", "cost": 22},
+    {"name": "Mackerel", "rarity": "C", "cost": 9},
+    {"name": "Magical Carp", "rarity": "L", "cost": 10000},
+    {"name": "Rainbow Trout", "rarity": "U", "cost": 25},
+    {"name": "Shrimp", "rarity": "C", "cost": 8},
+    {"name": "Yellow Perch", "rarity": "C", "cost": 10},
 ]
 
 # Player class
@@ -112,8 +112,10 @@ class Player:
             self.inventory.append(fish)
 
     def sell_fish(self, fish):
-        self.money += fish.cost
-        self.inventory.remove(fish)
+        if fish in self.inventory:
+            self.money += fish.cost
+            self.inventory.remove(fish)
+            sale.play()
 
 # Fish class
 class Fish:
@@ -146,70 +148,49 @@ class Lake:
 player = Player()
 lake = Lake()
 
-# Load and scale the hand image once (adjust the size as needed)
-hand = pygame.image.load("hand.png")
-hand = pygame.transform.scale(hand, (500, 300))
+default_hand = pygame.image.load("hand.png")
+default_hand = pygame.transform.scale(default_hand, (500, 300))
+grab = pygame.image.load("grab.png")
+grab = pygame.transform.scale(grab, (500, 300))
+
+hand = default_hand
 
 # Main game loop
 running = True
 while running:
-    screen.fill(blu_color)  # Game background
-
-    # Draw the inventory area
+    screen.fill(blu_color)
     pygame.draw.rect(screen, button_dark, (550, 50, 200, 400))
     inventory_text = font.render(f"Inventory ({len(player.inventory)}/12)", True, w_color)
     screen.blit(inventory_text, (560, 60))
 
-    # Get the current mouse position
     mouse_x, mouse_y = pygame.mouse.get_pos()
 
-    # Display fish in the player's inventory with hover highlighting
     for idx, fish in enumerate(player.inventory):
         fish_rect = pygame.Rect(560, 90 + idx * 30, 180, 25)
-        if fish_rect.collidepoint(mouse_x, mouse_y):
-            fish_text = font.render(f"{fish.name} (${fish.cost})", True, r_color)  # Highlight in red
-            
-        else:
-            fish_text = font.render(f"{fish.name} (${fish.cost})", True, g_color)
+        fish_text = font.render(f"{fish.name} (${fish.cost})", True, r_color if fish_rect.collidepoint(mouse_x, mouse_y) else g_color)
         screen.blit(fish_text, (560, 90 + idx * 30))
 
-    # Draw the hand image 
     hand_rect = hand.get_rect(center=(mouse_x, mouse_y))
     screen.blit(hand, hand_rect)
 
-    # Display player level and EXP info
-    level_text = font.render(f"Level: {player.lvl} | EXP: {player.exp}/{player.exp_needed}", True, w_color)
-    screen.blit(level_text, (20, 20))
-
-    # Display fish available in the lake
-    for idx, fish in enumerate(lake.fish_lst):
-        fish_text = font.render(fish.name, True, w_color)
-        screen.blit(fish_text, (50, 60 + idx * 30))
-
-    # Process
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
-        # On click, check if an inventory fish is clicked to sell it; otherwise, catch a fish
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            sold = False
-            
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            hand = grab
             for idx, fish in enumerate(player.inventory):
                 fish_rect = pygame.Rect(560, 90 + idx * 30, 180, 25)
                 if fish_rect.collidepoint(event.pos):
                     player.sell_fish(fish)
-                    sold = True
                     break
-                
-            if not sold:
+            else:
                 caught_fish = lake.catch_fish()
                 if caught_fish:
                     player.add_fish(caught_fish)
                     player.leveling(caught_fish.cost // 5)
-                    lake.spawn_fish()
+        elif event.type == pygame.MOUSEBUTTONUP:
+            hand = default_hand
 
     pygame.display.update()
-
 pygame.quit()
 sys.exit()

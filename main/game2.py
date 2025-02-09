@@ -1,6 +1,7 @@
 import os
 import pygame, sys, random
 import soundfile as sf
+
 from pygame.locals import *
 from pygame import mixer
 
@@ -8,11 +9,17 @@ from pygame import mixer
 pygame.init()
 pygame.mixer.init()
 screen = pygame.display.set_mode((800, 600))
-pygame.display.set_caption("Beautiful and Wonderful Fish 鱻 Snatcher")
+pygame.display.set_caption("Beautiful and Wonderful Fish Snatcher")
 
 # BGM
 pygame.mixer.music.load("piccadilly.wav")
 pygame.mixer.music.play(-1)
+
+# SFX
+awesome = pygame.mixer.Sound("awesome.mp3")
+fail = pygame.mixer.Sound("fail.mp3")
+sale = pygame.mixer.Sound("sale.mp3")
+splash = pygame.mixer.Sound("splash.mp3")
 
 # Colors
 b_color = (0, 0, 0)        # Black
@@ -53,8 +60,8 @@ def quit_game():
     sys.exit()
 
 # Buttons for the menu
-start_button = Button("Go Fish!", 300, 250, 200, 60, start_game)
-exit_button = Button("Go Home!", 300, 350, 200, 60, quit_game)
+start_button = Button("Go Fish", 300, 250, 200, 60, start_game)
+exit_button = Button("Go Home", 300, 350, 200, 60, quit_game)
 
 # Menu loop
 menu = True
@@ -74,19 +81,18 @@ while menu:
 
 # Fish data
 FISHIES = [
-    {"name": "Blobbette", "rarity": "rare", "cost": 100},
-    {"name": "Chef", "rarity": "rare", "cost": 85},
-    {"name": "Gerald", "rarity": "rare", "cost": 90},
-    {"name": "Goldfish", "rarity": "common", "cost": 5},
-    {"name": "Largemouth Bass", "rarity": "uncommon", "cost": 22},
-    {"name": "Mackerel", "rarity": "common", "cost": 9},
-    {"name": "Magical Karp", "rarity": "legendary", "cost": 10000},
-    {"name": "Rainbow Trout", "rarity": "uncommon", "cost": 25},
-    {"name": "Shrimp", "rarity": "common", "cost": 8},
-    {"name": "Yellow Perch", "rarity": "common", "cost": 10},
-    #{"name": "fish11", "rarity": "-", "cost": 5},
-    # {"name": "fish12", "rarity": "-", "cost": 5}
+    {"name": "Blobette", "rarity": "R", "cost": 100},
+    {"name": "Chef", "rarity": "R", "cost": 85},
+    {"name": "Gerald", "rarity": "R", "cost": 90},
+    {"name": "Goldfish", "rarity": "C", "cost": 5},
+    {"name": "Largemouth", "rarity": "U", "cost": 22},
+    {"name": "Mackerel", "rarity": "C", "cost": 9},
+    {"name": "Magical Carp", "rarity": "L", "cost": 10000},
+    {"name": "Rainbow Trout", "rarity": "U", "cost": 25},
+    {"name": "Shrimp", "rarity": "C", "cost": 8},
+    {"name": "Yellow Perch", "rarity": "C", "cost": 10},
 ]
+
 
 # Player class
 class Player:
@@ -114,6 +120,7 @@ class Player:
     def sell_fish(self, fish):
         self.money += fish.cost
         self.inventory.remove(fish)
+        sale.play()
 
 # Fish class
 class Fish:
@@ -139,16 +146,23 @@ class Lake:
         if self.fish_lst:
             success = random.randint(1, 10)
             if success > 3:  # 70% success rate
+                awesome.play()
                 return self.fish_lst.pop(random.randint(0, len(self.fish_lst) - 1))
-        return None
+            else:
+                fail.play()
+            return None
 
 # Game setup
 player = Player()
 lake = Lake()
 
 # Load and scale the hand image once (adjust the size as needed)
-hand = pygame.image.load("hand.png")
-hand = pygame.transform.scale(hand, (500, 300))
+open_hand = pygame.image.load("hand.png")
+open_hand = pygame.transform.scale(open_hand, (500, 300))
+grab = pygame.image.load("grab.png")
+grab = pygame.transform.scale(grab, (500, 300))
+
+hand = open_hand
 
 # Main game loop
 running = True
@@ -191,9 +205,11 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-        # On click, check if an inventory fish is clicked to sell it; otherwise, catch a fish
+        # On click
         if event.type == pygame.MOUSEBUTTONDOWN:
             sold = False
+            hand = grab
+            splash.play()
             
             for idx, fish in enumerate(player.inventory):
                 fish_rect = pygame.Rect(560, 90 + idx * 30, 180, 25)
@@ -209,6 +225,8 @@ while running:
                     player.leveling(caught_fish.cost // 5)
                     lake.spawn_fish()
 
+        elif event.type == pygame.MOUSEBUTTONUP:
+            hand = open_hand
     pygame.display.update()
 
 pygame.quit()
